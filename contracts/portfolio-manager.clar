@@ -220,3 +220,140 @@
     (ok true)
   )
 )
+
+;; Rebalance portfolio to match target allocations
+(define-public (rebalance-portfolio (portfolio-id uint))
+  (let ((portfolio (unwrap! (get-portfolio portfolio-id) ERR-INVALID-PORTFOLIO)))
+    (asserts! (is-eq tx-sender (get owner portfolio)) ERR-NOT-AUTHORIZED)
+    (asserts! (get active portfolio) ERR-INVALID-PORTFOLIO)
+    (map-set Portfolios portfolio-id
+      (merge portfolio { last-rebalanced: block-height })
+    )
+    (ok true)
+  )
+)
+
+;; Helper function for iterating over tokens during portfolio creation
+(define-private (set-portfolio-asset
+    (portfolio-id uint)
+    (token-id uint)
+    (token principal)
+    (percentage uint)
+  )
+  (begin
+    (map-set PortfolioAssets {
+      portfolio-id: portfolio-id,
+      token-id: token-id,
+    } {
+      target-percentage: percentage,
+      current-amount: u0,
+      token-address: token,
+    })
+    (ok true)
+  )
+)
+
+;; Create a new portfolio with specified tokens and allocations
+(define-public (create-portfolio
+    (initial-tokens (list 10 principal))
+    (percentages (list 10 uint))
+  )
+  (let (
+      (portfolio-id (+ (var-get portfolio-counter) u1))
+      (token-count (len initial-tokens))
+      (percentage-count (len percentages))
+    )
+    (asserts! (<= token-count MAX-TOKENS-PER-PORTFOLIO) ERR-MAX-TOKENS-EXCEEDED)
+    (asserts! (is-eq token-count percentage-count) ERR-LENGTH-MISMATCH)
+    (asserts! (validate-portfolio-percentages percentages) ERR-INVALID-PERCENTAGE)
+    (asserts! (>= token-count u2) ERR-INVALID-PORTFOLIO)
+    ;; Create portfolio record
+    (map-set Portfolios portfolio-id {
+      owner: tx-sender,
+      created-at: block-height,
+      last-rebalanced: block-height,
+      total-value: u0,
+      active: true,
+      token-count: token-count,
+    })
+    ;; Initialize first token
+    (try! (set-portfolio-asset portfolio-id u0
+      (unwrap! (element-at initial-tokens u0) ERR-INVALID-TOKEN)
+      (unwrap! (element-at percentages u0) ERR-INVALID-PERCENTAGE)
+    ))
+    ;; Initialize second token
+    (try! (set-portfolio-asset portfolio-id u1
+      (unwrap! (element-at initial-tokens u1) ERR-INVALID-TOKEN)
+      (unwrap! (element-at percentages u1) ERR-INVALID-PERCENTAGE)
+    ))
+    ;; Initialize third token if exists
+    (if (>= token-count u3)
+      (try! (set-portfolio-asset portfolio-id u2
+        (unwrap! (element-at initial-tokens u2) ERR-INVALID-TOKEN)
+        (unwrap! (element-at percentages u2) ERR-INVALID-PERCENTAGE)
+      ))
+      (ok true)
+    )
+    ;; Initialize fourth token if exists
+    (if (>= token-count u4)
+      (try! (set-portfolio-asset portfolio-id u3
+        (unwrap! (element-at initial-tokens u3) ERR-INVALID-TOKEN)
+        (unwrap! (element-at percentages u3) ERR-INVALID-PERCENTAGE)
+      ))
+      (ok true)
+    )
+    ;; Initialize fifth token if exists
+    (if (>= token-count u5)
+      (try! (set-portfolio-asset portfolio-id u4
+        (unwrap! (element-at initial-tokens u4) ERR-INVALID-TOKEN)
+        (unwrap! (element-at percentages u4) ERR-INVALID-PERCENTAGE)
+      ))
+      (ok true)
+    )
+    ;; Initialize sixth token if exists
+    (if (>= token-count u6)
+      (try! (set-portfolio-asset portfolio-id u5
+        (unwrap! (element-at initial-tokens u5) ERR-INVALID-TOKEN)
+        (unwrap! (element-at percentages u5) ERR-INVALID-PERCENTAGE)
+      ))
+      (ok true)
+    )
+    ;; Initialize seventh token if exists
+    (if (>= token-count u7)
+      (try! (set-portfolio-asset portfolio-id u6
+        (unwrap! (element-at initial-tokens u6) ERR-INVALID-TOKEN)
+        (unwrap! (element-at percentages u6) ERR-INVALID-PERCENTAGE)
+      ))
+      (ok true)
+    )
+    ;; Initialize eighth token if exists
+    (if (>= token-count u8)
+      (try! (set-portfolio-asset portfolio-id u7
+        (unwrap! (element-at initial-tokens u7) ERR-INVALID-TOKEN)
+        (unwrap! (element-at percentages u7) ERR-INVALID-PERCENTAGE)
+      ))
+      (ok true)
+    )
+    ;; Initialize ninth token if exists
+    (if (>= token-count u9)
+      (try! (set-portfolio-asset portfolio-id u8
+        (unwrap! (element-at initial-tokens u8) ERR-INVALID-TOKEN)
+        (unwrap! (element-at percentages u8) ERR-INVALID-PERCENTAGE)
+      ))
+      (ok true)
+    )
+    ;; Initialize tenth token if exists
+    (if (>= token-count u10)
+      (try! (set-portfolio-asset portfolio-id u9
+        (unwrap! (element-at initial-tokens u9) ERR-INVALID-TOKEN)
+        (unwrap! (element-at percentages u9) ERR-INVALID-PERCENTAGE)
+      ))
+      (ok true)
+    )
+    ;; Add portfolio to user's portfolio list
+    (try! (add-to-user-portfolios tx-sender portfolio-id))
+    ;; Update the portfolio counter
+    (var-set portfolio-counter portfolio-id)
+    (ok portfolio-id)
+  )
+)
